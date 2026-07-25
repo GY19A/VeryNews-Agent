@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 62" role="img" aria-label="XTrace Memory">
+  <title>XTrace Memory</title>
+  <defs>
+    <linearGradient id="xtGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <!-- Mark: two crossing traces converging on a memory node -->
+  <g fill="none" stroke="url(#xtGrad)" stroke-width="3.4" stroke-linecap="round">
+    <path d="M44 8 L76 40"/>
+    <path d="M76 8 L44 40"/>
+  </g>
+  <circle cx="60" cy="24" r="8.6" fill="#0b1120" stroke="url(#xtGrad)" stroke-width="3.4"/>
+  <circle cx="60" cy="24" r="3.2" fill="url(#xtGrad)"/>
+  <!-- Wordmark -->
+  <text x="60" y="56" text-anchor="middle"
+        font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="15.5" font-weight="700" fill="#e5e7eb" letter-spacing="0.4">XTrace</text>
+</svg>

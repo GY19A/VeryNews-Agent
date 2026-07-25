@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VeryNews · Memory Is All You Need</title>
+<!--
+  A single presentation slide.
+
+  Light theme for projection
+  --------------------------
+  Projectors wash out dark backgrounds: their black level is limited by ambient
+  light, so dark panels turn muddy grey and thin light text smears. This deck is
+  therefore light-on-white, and every accent is a *darkened* variant of the
+  product palette rather than the on-screen tint — #6d28d9 instead of #a78bfa,
+  and so on. Screen-bright pastels look correct on a monitor and disappear on a
+  wall.
+
+  Fixed 1600x900 stage
+  --------------------
+  Projectors and screen-shares vary wildly, so the deck is authored at one
+  canonical 16:9 size and scaled to fit the viewport with a transform. That
+  keeps every gap, font size and node position exactly as composed instead of
+  reflowing unpredictably at the moment it matters.
+
+  Self-contained
+  --------------
+  No CDN, no build step, no network at runtime. Fonts fall back to system UI
+  stacks and the two logos sit next to this file, so the slide renders offline
+  from a USB stick or an air-gapped room.
+-->
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --bg-0: #f7f8fc;
+    --ink: #0f172a;
+    --ink-dim: #414c66;
+    --ink-faint: #4e5872;
+    --indigo: #4338ca;
+    --violet: #6d28d9;
+    --cyan: #0e7490;
+    --emerald: #047857;
+    --amber: #b45309;
+    --line: rgba(51, 65, 85, 0.16);
+    --panel: rgba(255, 255, 255, 0.82);
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+  }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg-0);
+    color: var(--ink);
+    font-family: var(--font);
+    overflow: hidden;
+  }
+
+  /* ---------- Backdrop ---------- */
+
+  /* Layered radial washes read as depth without costing a raster image. Kept
+     very pale: on a projector even a 12% tint reads as a visible colour cast. */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(1100px 620px at 14% 6%, rgba(99, 102, 241, 0.13), transparent 62%),
+      radial-gradient(920px 560px at 88% 12%, rgba(139, 92, 246, 0.11), transparent 60%),
+      radial-gradient(1000px 620px at 76% 96%, rgba(14, 116, 144, 0.08), transparent 62%),
+      radial-gradient(760px 520px at 26% 92%, rgba(4, 120, 87, 0.06), transparent 64%),
+      linear-gradient(160deg, #fdfdff 0%, #eef1f9 46%, #f8f9fd 100%);
+  }
+
+  /* Faint engineering grid, masked so it fades before touching the edges. */
+  .backdrop::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(51, 65, 85, 0.055) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(51, 65, 85, 0.055) 1px, transparent 1px);
+    background-size: 62px 62px;
+    -webkit-mask-image: radial-gradient(ellipse 76% 68% at 50% 46%, #000 38%, transparent 100%);
+            mask-image: radial-gradient(ellipse 76% 68% at 50% 46%, #000 38%, transparent 100%);
+  }
+
+  /* Slow aurora drift. Transform/opacity only, so it stays on the compositor
+     and never competes with the browser for layout work mid-presentation. */
+  .backdrop::after {
+    content: '';
+    position: absolute;
+    inset: -30%;
+    background:
+      radial-gradient(closest-side, rgba(99, 102, 241, 0.11), transparent) 20% 30% / 52% 52% no-repeat,
+      radial-gradient(closest-side, rgba(139, 92, 246, 0.09), transparent) 78% 66% / 48% 48% no-repeat;
+    filter: blur(38px);
+    animation: drift 26s ease-in-out infinite alternate;
+  }
+
+  @keyframes drift {
+    from { transform: translate3d(-2.2%, -1.4%, 0) scale(1); }
+    to   { transform: translate3d(2.6%, 2%, 0) scale(1.07); }
+  }
+
+  /* A light vignette darkens the extreme corners just enough to frame the
+     slide; any stronger and it looks like a projector focus problem. */
+  .vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse 84% 76% at 50% 48%, transparent 58%, rgba(51, 65, 85, 0.10) 100%);
+  }
+
+  /* ---------- Stage ---------- */
+
+  /* The stage is absolutely positioned and scaled from its top-left corner,
+     then centred by hand. Centring it with a grid instead does not work: the
+     scale transform is visual only, so the parent keeps reserving the full
+     unscaled 1600x900 and the slide drifts off-screen below that size. */
+  .stage-wrap {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .stage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1600px;
+    height: 900px;
+    padding: 26px 52px 20px;
+    display: flex;
+    flex-direction: column;
+    transform-origin: top left;
+  }
+
+  /* ---------- Header ---------- */
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+  }
+
+  .brand { display: flex; align-items: center; gap: 15px; }
+
+  .brand img {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    box-shadow: 0 0 0 1px rgba(51, 65, 85, 0.14), 0 6px 18px rgba(67, 56, 202, 0.22);
+  }
+
+  .brand-name {
+    font-size: 21px;
+    font-weight: 750;
+    letter-spacing: -0.015em;
+  }
+
+  .brand-sub {
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  .powered {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 17px 9px 15px;
+    border: 1px solid rgba(109, 40, 217, 0.22);
+    border-radius: 999px;
+    background: linear-gradient(120deg, rgba(109, 40, 217, 0.09), rgba(67, 56, 202, 0.05));
+    backdrop-filter: blur(9px);
+  }
+
+  .powered small {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: block;
+    line-height: 1.5;
+  }
+
+  .powered strong { font-size: 13.5px; font-weight: 700; letter-spacing: 0.01em; }
+  .powered img { height: 34px; width: auto; }
+
+  /* ---------- Headline ---------- */
+
+  .headline { margin-top: 13px; }
+
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 11.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--violet);
+    font-weight: 650;
+  }
+
+  .kicker::before {
+    content: '';
+    width: 28px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--violet));
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 62px;
+    line-height: 1.0;
+    font-weight: 800;
+    letter-spacing: -0.034em;
+  }
+
+  /* The thesis of the talk, so it gets the gradient. Stops are all dark enough
+     to stay readable when a projector lifts the black level. */
+  .hero-line {
+    display: block;
+    background: linear-gradient(96deg, #4338ca 0%, #6d28d9 36%, #0e7490 76%, #047857 100%);
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+    padding-bottom: 4px;
+  }
+
+  .sub {
+    margin: 12px 0 0;
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--ink-dim);
+    max-width: 132ch;
+  }
+
+  .sub b { color: #16203a; font-weight: 680; }
+
+  /* ---------- Body grid ---------- */
+
+  .body {
+    margin-top: 14px;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 410px;
+    gap: 20px;
+    min-height: 0;
+  }
+
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--panel);
+    backdrop-filter: blur(13px);
+    box-shadow: 0 10px 30px rgba(30, 41, 59, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    padding: 19px 22px 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 13px;
+  }
+
+  .panel-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .panel-note {
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    font-family: var(--mono);
+  }
+
+  /* ---------- Workflow diagram ---------- */
+
+  .flow { flex: 1; min-height: 0; }
+  .flow svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+  .node-box {
+    fill: #ffffff;
+    stroke: rgba(71, 85, 105, 0.42);
+    stroke-width: 1.6;
+  }
+
+  /* Node accent by agent kind, mirroring the live product's legend. */
+  .k-llm   .node-box { stroke: #7c3aed; }
+  .k-http  .node-box { stroke: #0e7490; }
+  .k-local .node-box { stroke: #64748b; }
+
+  /* XTrace touchpoints are the argument of the slide: tinted fill and a heavier
+     border so they stand out even through a washed-out projector. */
+  .k-mem .node-box {
+    stroke: var(--violet);
+    stroke-width: 2.8;
+    fill: #f2ecfe;
+  }
+
+  .node-label {
+    font-size: 17px;
+    font-weight: 640;
+    fill: #1a2338;
+    dominant-baseline: middle;
+  }
+
+  .k-mem .node-label { fill: #4c1d95; font-weight: 700; }
+
+  .node-dot { r: 5; }
+  .k-llm   .node-dot { fill: #7c3aed; }
+  .k-http  .node-dot { fill: #0e7490; }
+  .k-local .node-dot { fill: #64748b; }
+  .k-mem   .node-dot { fill: #6d28d9; }
+
+  .edge {
+    fill: none;
+    stroke: rgba(71, 85, 105, 0.42);
+    stroke-width: 1.9;
+  }
+
+  /* Dashes travel along the wires to suggest live execution. */
+  .edge-flow {
+    stroke: rgba(109, 40, 217, 0.72);
+    stroke-dasharray: 7 12;
+    animation: march 1.5s linear infinite;
+  }
+
+  @keyframes march { to { stroke-dashoffset: -38; } }
+
+  /* The feedback edge: this run's verdict becomes the next run's prior. */
+  .edge-loop {
+    stroke: url(#loopGrad);
+    stroke-width: 3.2;
+    stroke-dasharray: 10 9;
+    animation: march 1.9s linear infinite;
+  }
+
+  .lane-label {
+    font-size: 14px;
+    fill: #505a74;
+    font-family: var(--mono);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .loop-caption {
+    font-size: 18px;
+    font-weight: 700;
+    fill: #5b21b6;
+    letter-spacing: 0.05em;
+  }
+
+  .legend {
+    display: flex;
+    gap: 17px;
+    flex-wrap: wrap;
+    margin-top: 11px;
+    padding-top: 11px;
+    border-top: 1px solid var(--line);
+  }
+
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11.4px;
+    color: var(--ink-dim);
+  }
+
+  .legend i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* ---------- Memory panel ---------- */
+
+  .mem-viz {
+    position: relative;
+    /* Absorbs the panel's leftover height rather than holding a fixed size, so
+       the stats and reasoning below always fit. min-height keeps the orbit
+       legible; the SVG scales inside via preserveAspectRatio. */
+    flex: 1 1 auto;
+    min-height: 260px;
+    margin: 0 0 14px;
+    border-radius: 13px;
+    /* A visible violet frame and tint: on white, an untinted box reads as empty
+       space and the memory graph stops looking like the subject of the panel. */
+    border: 1px solid rgba(109, 40, 217, 0.22);
+    background:
+      radial-gradient(circle at 50% 50%, rgba(109, 40, 217, 0.13), transparent 68%),
+      #f6f3fe;
+    overflow: hidden;
+  }
+
+  .mem-viz svg { width: 100%; height: 100%; display: block; }
+
+  /* Dashed ring = the relevance horizon. Recalled memories that score below
+     the floor stay outside it and are dropped before they reach the model. */
+  .horizon {
+    fill: none;
+    stroke: rgba(109, 40, 217, 0.5);
+    stroke-width: 1.3;
+    stroke-dasharray: 4 6;
+    animation: spin 34s linear infinite;
+    transform-origin: 50% 50%;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .mem-core {
+    fill: url(#coreGrad);
+  }
+
+  .mem-core-ring {
+    fill: none;
+    stroke: rgba(109, 40, 217, 0.55);
+    stroke-width: 1.4;
+    animation: pulse 3.4s ease-in-out infinite;
+    transform-origin: 50% 50%;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50%      { opacity: 0.25; transform: scale(1.3); }
+  }
+
+  .mem-node { animation: bob 5s ease-in-out infinite; }
+  .mem-node:nth-of-type(even) { animation-duration: 6.4s; animation-delay: -1.9s; }
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4.5px); }
+  }
+
+  .mem-link {
+    stroke: rgba(109, 40, 217, 0.42);
+    stroke-width: 1.2;
+    fill: none;
+  }
+
+  .mem-caption {
+    font-size: 14px;
+    font-family: var(--mono);
+    fill: #4e5872;
+    letter-spacing: 0.03em;
+  }
+
+  /* Three numbers, sized generously: with the bullet list gone this row is the
+     only text under the graph, so it can afford to be read from the back. */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+  .stat {
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 12px 10px;
+    background: rgba(255, 255, 255, 0.75);
+    text-align: center;
+  }
+
+  .stat b {
+    display: block;
+    font-size: 30px;
+    font-weight: 780;
+    letter-spacing: -0.024em;
+    line-height: 1.08;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat.v b { color: var(--violet); }
+  .stat.c b { color: var(--cyan); }
+  .stat.e b { color: var(--emerald); }
+  .stat.a b { color: var(--amber); }
+
+  .stat small {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--ink-faint);
+    line-height: 1.34;
+    letter-spacing: 0.02em;
+  }
+
+  .why { margin-top: 13px; }
+
+  .why-title {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 9px;
+  }
+
+  .why ul { margin: 0; padding: 0; list-style: none; }
+
+  .why li {
+    position: relative;
+    padding-left: 18px;
+    font-size: 12.4px;
+    line-height: 1.46;
+    color: #3c4761;
+    margin-bottom: 7px;
+  }
+
+  .why li:last-child { margin-bottom: 0; }
+
+  .why li::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--violet);
+  }
+
+  .why li b { color: #1a2338; font-weight: 700; }
+
+  /* ---------- Footer ---------- */
+
+  footer {
+    margin-top: 13px;
+    padding-top: 11px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .closer {
+    font-size: 21px;
+    font-weight: 720;
+    letter-spacing: -0.014em;
+  }
+
+  .closer em {
+    font-style: normal;
+    background: linear-gradient(94deg, #6d28d9, #0e7490);
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .closer small {
+    display: block;
+    margin-top: 4px;
+    font-size: 12.5px;
+    font-weight: 450;
+    color: var(--ink-faint);
+    letter-spacing: 0;
+  }
+
+  .stamp {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 10.8px;
+    color: var(--ink-faint);
+    white-space: nowrap;
+  }
+
+  .stamp span {
+    padding: 5px 11px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  /* Respect a reduced-motion preference: keep the composition, drop the drift. */
+  @media (prefers-reduced-motion: reduce) {
+    .backdrop::after, .edge-flow, .edge-loop, .horizon,
+    .mem-core-ring, .mem-node { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="backdrop"></div>
+
+  <div class="stage-wrap">
+  <div class="stage" id="stage">
+
+    <header>
+      <div class="brand">
+        <img src="assets/verynews_logo.png" alt="VeryNews" />
+        <div>
+          <div class="brand-name">VeryNews</div>
+          <div class="brand-sub">Agentic Fact Verification</div>
+        </div>
+      </div>
+
+      <div class="powered">
+        <img src="assets/xtrace-logo-light.svg" alt="XTrace" />
+        <div>
+          <small>Long-term memory by</small>
+          <strong>XTrace Memory</strong>
+        </div>
+      </div>
+    </header>
+
+    <div class="headline">
+      <h1>
+        <span class="hero-line">Memory Is All You Need</span>
+      </h1>
+      <p class="sub">
+        One claim pulls in more articles than any context window holds. VeryNews verifies each
+        claim against sources — then <b>remembers what it proved</b>.
+      </p>
+    </div>
+
+    <div class="body">
+
+      <!-- ============ Workflow ============ -->
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Verification Workflow</div>
+          <div class="panel-note">15 agents · 8 parallel lanes · 76s</div>
+        </div>
+
+        <div class="flow">
+          <!-- Laid out by hand: the pipeline shape is fixed, so hardcoded
+               geometry beats shipping a layout engine for one static slide.
+               The viewBox is cropped to the drawn content (measured, not
+               guessed) so the diagram scales up instead of sitting inside a
+               band of empty space. -->
+          <svg viewBox="6 62 1426 514" preserveAspectRatio="xMidYMid meet" aria-label="Verification workflow diagram">
+            <defs>
+              <linearGradient id="loopGrad" x1="1" y1="0" x2="0" y2="0">
+                <stop offset="0%"   stop-color="#0e7490"/>
+                <stop offset="55%"  stop-color="#6d28d9"/>
+                <stop offset="100%" stop-color="#4338ca"/>
+              </linearGradient>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="5.4" markerHeight="5.4" orient="auto-start-reverse">
+                <path d="M0 0 L10 5 L0 10 z" fill="#4338ca"/>
+              </marker>
+            </defs>
+
+            <g id="lanes"></g>
+            <g id="edges"></g>
+            <g id="nodes"></g>
+
+            <!-- Feedback loop: drawn from real node geometry in script, so it
+                 keeps following "Store Findings" → "Recall Memory" even when the
+                 boxes resize. It routes below the pipeline and up the far left
+                 so it never crosses another node. -->
+            <path id="loopPath" class="edge edge-loop" marker-end="url(#arrow)" />
+            <text id="loopCaption" class="loop-caption" text-anchor="middle">
+              every verdict becomes the next run's prior
+            </text>
+          </svg>
+        </div>
+
+        <div class="legend">
+          <span><i style="background:#7c3aed"></i>LLM reasoning</span>
+          <span><i style="background:#0e7490"></i>Retrieval</span>
+          <span><i style="background:#64748b"></i>Local compute</span>
+          <span><i style="background:#6d28d9;outline:2px solid #ddd6fe"></i>XTrace Memory</span>
+        </div>
+      </section>
+
+      <!-- ============ Memory ============ -->
+      <aside class="panel">
+        <div class="panel-head">
+          <div class="panel-title">XTrace Memory</div>
+          <div class="panel-note">4 touchpoints</div>
+        </div>
+
+        <!-- Relevance-as-distance: the same metaphor the product's live memory
+             space uses, so the slide matches what the audience sees.
+             The viewBox is kept close to the box's real pixel size, so the
+             label font sizes below render at their nominal size instead of
+             being scaled down into illegibility. -->
+        <div class="mem-viz">
+          <svg viewBox="0 0 400 268" preserveAspectRatio="xMidYMid meet" aria-label="Memory space visualisation">
+            <defs>
+              <radialGradient id="coreGrad">
+                <stop offset="0%"   stop-color="#8b5cf6"/>
+                <stop offset="55%"  stop-color="#6d28d9"/>
+                <stop offset="100%" stop-color="#4c1d95"/>
+              </radialGradient>
+            </defs>
+
+            <ellipse class="horizon" cx="200" cy="116" rx="166" ry="98"/>
+            <g id="memLinks"></g>
+            <g id="memNodes"></g>
+
+            <circle class="mem-core-ring" cx="200" cy="116" r="38"/>
+            <circle class="mem-core" cx="200" cy="116" r="27"/>
+            <text x="200" y="123" text-anchor="middle"
+                  style="font-size:17px;font-weight:800;fill:#ffffff;letter-spacing:.04em">CLAIM</text>
+
+            <text class="mem-caption" x="200" y="258" text-anchor="middle">
+              inside the horizon · score ≥ 0.35
+            </text>
+          </svg>
+        </div>
+
+        <div class="stats">
+          <div class="stat v">
+            <b>0.35</b>
+            <small>relevance floor</small>
+          </div>
+          <div class="stat c">
+            <b>&infin;</b>
+            <small>context beyond the window</small>
+          </div>
+          <div class="stat e">
+            <b>100%</b>
+            <small>grounded in a source quote</small>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer>
+      <div class="closer">
+        Break it down. Prove each part. <em>Remember what you proved.</em>
+      </div>
+      <div class="stamp">
+        <span>gpt-5.6-terra</span>
+        <span>verynews.org</span>
+      </div>
+    </footer>
+
+  </div>
+  </div>
+
+  <div class="vignette"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function el(name, attrs) {
+    var n = document.createElementNS(NS, name);
+    for (var k in attrs) { if (attrs[k] != null) n.setAttribute(k, attrs[k]); }
+    return n;
+  }
+
+  /* ---------------- Workflow ----------------
+   * Mirrors WORKFLOW_NODES in workflow.py: same ids, same lanes, same
+   * dependencies. `mem` marks the four XTrace touchpoints. Columns are lanes,
+   * so nodes sharing a column genuinely run concurrently.
+   */
+  // Seven columns on a uniform pitch. Boxes are sized to their label below, so
+  // NODE_W_MIN only sets a floor for the shortest ones; pitch minus the widest
+  // box is the gutter the edges route through. Pitch must exceed the widest
+  // measured box (~178) or adjacent columns collide.
+  //
+  // Row spacing is deliberately generous: the pipeline is naturally much wider
+  // than the panel's aspect, so without spreading the rows the diagram
+  // letterboxes and wastes a third of the available height.
+  var NODE_H = 54, NODE_W_MIN = 140, PITCH = 202, X0 = 20;
+  var COL = [0, 1, 2, 3, 4, 5, 6, 6].map(function (i) { return X0 + i * PITCH; });
+
+  // Columns sit ~202 units apart, so captions must stay short or adjacent
+  // lanes overlap. The ∥ marks the lanes that genuinely run concurrently.
+  var LANE_TITLES = [
+    'lane 0 ∥', 'lane 1', 'lane 2', 'lane 3 ∥',
+    'lane 4 ∥', 'lane 5', 'lane 6', ''
+  ];
+
+  var NODES = [
+    { id: 'normalise', label: 'Normalise',    kind: 'llm',   lane: 0, y: 130 },
+    { id: 'recall',    label: 'Recall Memory',kind: 'mem',   lane: 0, y: 310 },
+    { id: 'lessons',   label: 'Recall Lessons',kind:'mem',   lane: 0, y: 490 },
+
+    { id: 'plan',      label: 'Extract Claims',kind:'llm',   lane: 1, y: 310 },
+    { id: 'search',    label: 'Search Sources',kind:'http',  lane: 2, y: 310 },
+
+    { id: 'ingest',    label: 'Ingest Articles',kind:'mem',  lane: 3, y: 130 },
+    { id: 'facts',     label: 'Extract 5W1H',  kind:'llm',   lane: 3, y: 310 },
+    { id: 'verify',    label: 'Verify Claims', kind:'llm',   lane: 3, y: 490 },
+
+    { id: 'evidence',  label: 'Build Evidence',kind:'llm',   lane: 4, y: 130 },
+    { id: 'expert',    label: 'Expert Analysis',kind:'llm',  lane: 4, y: 310 },
+    { id: 'timeline',  label: 'Timeline',      kind:'llm',   lane: 4, y: 490 },
+
+    { id: 'judge',     label: 'Adjudicate',    kind:'llm',   lane: 5, y: 310 },
+
+    { id: 'graph',     label: 'Reasoning DAG', kind:'local',lane: 6, y: 220 },
+    { id: 'report',    label: 'Write Report',  kind:'llm',   lane: 6, y: 400 },
+
+    { id: 'remember',  label: 'Store Findings',kind:'mem',   lane: 7, y: 600 }
+  ];
+
+  var EDGES = [
+    ['normalise','plan'], ['lessons','plan'],
+    ['plan','search'],
+    ['search','ingest'], ['search','facts'], ['search','verify'],
+    ['plan','verify'], ['recall','verify'],
+    ['verify','evidence'], ['verify','expert'], ['facts','expert'],
+    ['verify','timeline'], ['facts','timeline'],
+    ['evidence','judge'], ['expert','judge'], ['timeline','judge'],
+    ['judge','graph'], ['judge','report'],
+    ['report','remember']
+  ];
+
+  var byId = {};
+
+  /* Boxes are sized to their own label instead of sharing one fixed width.
+   * Font metrics vary by platform, so the label is measured in the real SVG
+   * rather than estimated from character counts — that is what previously let
+   * "Search Sources" and "Expert Analysis" spill past their borders.
+   */
+  (function sizeNodes() {
+    var probe = el('text', { class: 'node-label', x: -9999, y: -9999 });
+    document.getElementById('nodes').appendChild(probe);
+
+    NODES.forEach(function (n) {
+      probe.textContent = n.label;
+      // 30 leads the text (dot + gap), 18 trails it as right padding.
+      var needed = Math.ceil(probe.getComputedTextLength()) + 30 + 18;
+      n.w = Math.max(NODE_W_MIN, needed);
+    });
+
+    probe.remove();
+  })();
+
+  NODES.forEach(function (n) {
+    n.x = COL[n.lane];
+    n.cx = n.x + n.w / 2;
+    n.cy = n.y + NODE_H / 2;
+    byId[n.id] = n;
+  });
+
+  // Lane captions, one per distinct column.
+  var laneG = document.getElementById('lanes');
+  var seen = {};
+  NODES.forEach(function (n) {
+    if (seen[n.lane] || !LANE_TITLES[n.lane]) { return; }
+    seen[n.lane] = 1;
+    var t = el('text', { x: n.x, y: 100, class: 'lane-label' });
+    t.textContent = LANE_TITLES[n.lane];
+    laneG.appendChild(t);
+  });
+
+  // Edges leave the right face and enter the left face; a horizontal-tangent
+  // cubic keeps them clear of the node boxes.
+  var edgeG = document.getElementById('edges');
+  EDGES.forEach(function (pair, i) {
+    var a = byId[pair[0]], b = byId[pair[1]];
+    var x1 = a.x + a.w, y1 = a.cy, x2 = b.x, y2 = b.cy;
+    var dx = Math.max(38, (x2 - x1) * 0.55);
+    var d = 'M ' + x1 + ' ' + y1 +
+            ' C ' + (x1 + dx) + ' ' + y1 + ', ' + (x2 - dx) + ' ' + y2 +
+            ', ' + x2 + ' ' + y2;
+
+    var cls = 'edge';
+    // Animate the memory-fed wires so the eye follows memory through the run.
+    if (a.kind === 'mem' || b.kind === 'mem') { cls += ' edge-flow'; }
+    var p = el('path', { class: cls, d: d });
+    p.style.animationDelay = (i * 0.11).toFixed(2) + 's';
+    edgeG.appendChild(p);
+  });
+
+  var nodeG = document.getElementById('nodes');
+  NODES.forEach(function (n) {
+    var g = el('g', { class: 'k-' + n.kind });
+    g.appendChild(el('rect', {
+      class: 'node-box', x: n.x, y: n.y,
+      width: n.w, height: NODE_H, rx: 13
+    }));
+    g.appendChild(el('circle', { class: 'node-dot', cx: n.x + 17, cy: n.cy }));
+    var t = el('text', { class: 'node-label', x: n.x + 30, y: n.cy + 0.5 });
+    t.textContent = n.label;
+    g.appendChild(t);
+    nodeG.appendChild(g);
+  });
+
+  /* ---------------- Feedback loop ----------------
+   * The argument of the slide: what this run stores is what the next run
+     recalls. Derived from live node positions so it survives resizing.
+   */
+  (function drawLoop() {
+    var from = byId.remember;   // Store Findings
+    var to = byId.recall;      // Recall Memory
+    var BOT = 676;             // empty band below the pipeline
+    var LEFT = 14;             // gutter left of column 0
+
+    var sx = from.x + from.w, sy = from.cy;
+    var tx = to.x, ty = to.cy;
+
+    document.getElementById('loopPath').setAttribute('d',
+      'M ' + sx + ' ' + sy +
+      ' C ' + (sx + 34) + ' ' + (sy + 30) + ', ' + (sx + 24) + ' ' + BOT + ', ' + (sx - 26) + ' ' + BOT +
+      ' L ' + (LEFT + 48) + ' ' + BOT +
+      ' C ' + LEFT + ' ' + BOT + ', ' + LEFT + ' ' + (BOT - 20) + ', ' + LEFT + ' ' + (ty + 52) +
+      ' C ' + LEFT + ' ' + (ty + 20) + ', ' + LEFT + ' ' + ty + ', ' + tx + ' ' + ty);
+
+    var cap = document.getElementById('loopCaption');
+    cap.setAttribute('x', (sx + tx) / 2);
+    cap.setAttribute('y', BOT - 9);
+  })();
+  /* ---------------- Crop the workflow viewBox ----------------
+   * Fit the viewBox to what was actually drawn. Hand-written viewBox numbers
+   * drift out of date the moment a label length, pitch or row spacing changes,
+   * and the symptom is a diagram quietly letterboxed inside a band of empty
+   * space. Measuring instead means the diagram always scales up to fill its
+   * panel.
+   */
+  (function cropViewBox() {
+    var svg = document.querySelector('.flow svg');
+    var PAD = 8;
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    svg.querySelectorAll('#nodes rect, #nodes text, #edges path, .lane-label, .loop-caption, #loopPath')
+      .forEach(function (e) {
+        var b = e.getBBox();
+        if (!b.width && !b.height) { return; }
+        minX = Math.min(minX, b.x); minY = Math.min(minY, b.y);
+        maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + b.height);
+      });
+
+    if (!isFinite(minX)) { return; }
+    svg.setAttribute('viewBox',
+      (minX - PAD) + ' ' + (minY - PAD) + ' ' +
+      (maxX - minX + PAD * 2) + ' ' + (maxY - minY + PAD * 2));
+  })();
+  /* ---------------- Memory space ----------------
+   * Distance from the centre encodes relevance, matching MemorySpace.js:
+   * high-scoring memories sit close and inside the dashed horizon; anything
+   * under the floor is parked outside it and greyed out.
+   *
+   * Positions are authored rather than generated. The box is wide and short, so
+   * a computed orbit either clustered nodes in the middle or pushed labels off
+   * the edge; eight hand-placed nodes keep the labels legible on a projector
+   * while still putting the strongest matches nearest the claim.
+   */
+  var MEM = [
+    { x: 122, y:  46, score: 0.94, label: 'prior verdict' },
+    { x: 278, y:  46, score: 0.86, label: 'source fact' },
+    { x: 330, y: 148, score: 0.74, label: 'article' },
+    { x:  98, y: 166, score: 0.63, label: 'lesson' },
+    { x:  50, y:  96, score: 0.52, label: 'timeline' },
+    { x: 352, y:  92, score: 0.41, label: 'entity' },
+    { x:  56, y: 224, score: 0.22, label: 'off-topic', out: true },
+    { x: 344, y: 224, score: 0.11, label: 'off-topic', out: true }
+  ];
+
+  var CX = 200, CY = 116;
+  var linkG = document.getElementById('memLinks');
+  var memG = document.getElementById('memNodes');
+
+  MEM.forEach(function (m, i) {
+    // Rejected memories are drawn unlinked: they never reach the prompt.
+    if (!m.out) {
+      linkG.appendChild(el('line', { class: 'mem-link', x1: CX, y1: CY, x2: m.x, y2: m.y }));
+    }
+
+    var g = el('g', { class: 'mem-node' });
+    g.style.animationDelay = (-i * 0.7).toFixed(2) + 's';
+    g.appendChild(el('circle', {
+      cx: m.x, cy: m.y, r: m.out ? 8 : 9 + m.score * 6,
+      fill: m.out ? '#cbd5e1' : '#6d28d9',
+      stroke: m.out ? '#94a3b8' : '#4c1d95',
+      'stroke-width': 1.5
+    }));
+
+    var t = el('text', {
+      x: m.x, y: m.y - 19, 'text-anchor': 'middle',
+      style: 'font-size:15px;font-family:var(--mono);letter-spacing:.02em;fill:' +
+             (m.out ? '#5d6678' : '#4c1d95')
+    });
+    t.textContent = m.label;
+    g.appendChild(t);
+    memG.appendChild(g);
+  });
+
+  /* ---------------- Fit the stage ----------------
+   * Scale the 1600x900 composition to the viewport so the slide fills any
+   * projector without reflowing. Because the transform origin is the top-left
+   * corner, the leftover space is halved into an explicit offset — otherwise
+   * the slide sits off-centre at any size other than exactly 16:9.
+   */
+  var stage = document.getElementById('stage');
+  var W = 1600, H = 900;
+
+  function fit() {
+    var s = Math.min(window.innerWidth / W, window.innerHeight / H);
+    var x = (window.innerWidth - W * s) / 2;
+    var y = (window.innerHeight - H * s) / 2;
+    stage.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + s + ')';
+  }
+
+  fit();
+  window.addEventListener('resize', fit);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 62" role="img" aria-label="XTrace Memory">
+  <title>XTrace Memory</title>
+  <!--
+    Light-theme variant of assets/xtrace-logo.svg.
+
+    The original is built for a dark UI: its wordmark is #e5e7eb and the memory
+    node is filled #0b1120, so on a white slide the text disappears and the node
+    reads as a black blob. Here the wordmark is dark, the node is filled white,
+    and the gradient stops are the darkened projector-safe pair used across this
+    deck. Kept as a separate file so the shared brand asset stays untouched.
+  -->
+  <defs>
+    <linearGradient id="xtGradLight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6d28d9"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+  </defs>
+  <!-- Mark: two crossing traces converging on a memory node -->
+  <g fill="none" stroke="url(#xtGradLight)" stroke-width="3.4" stroke-linecap="round">
+    <path d="M44 8 L76 40"/>
+    <path d="M76 8 L44 40"/>
+  </g>
+  <circle cx="60" cy="24" r="8.6" fill="#ffffff" stroke="url(#xtGradLight)" stroke-width="3.4"/>
+  <circle cx="60" cy="24" r="3.2" fill="url(#xtGradLight)"/>
+  <!-- Wordmark -->
+  <text x="60" y="56" text-anchor="middle"
+        font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="15.5" font-weight="700" fill="#1a2338" letter-spacing="0.4">XTrace</text>
+</svg>
