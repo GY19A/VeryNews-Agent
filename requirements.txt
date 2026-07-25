@@ -1,0 +1,11 @@
+httpx
+aiohttp
+python-dotenv 
+google-generativeai
+langgraph
+langchain
+pydantic
+tavily-python
+bs4
+requests
+pdfminer.six
