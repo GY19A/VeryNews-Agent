@@ -109,6 +109,9 @@ Evidence chain: {evidence}
 Expert analysis: {analysis}
 Latest developments: {latest_updates}
 Current research time: {current_time}
+
+{memory_context}
+
 Output format:
 {{"result": "True/False/Partially True", "reason": "...", "sources": ["..."], "timestamp": "..."}}
 """

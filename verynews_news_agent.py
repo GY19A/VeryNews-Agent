@@ -17,6 +17,7 @@ from prompts import (
 )
 import asyncio
 import google.generativeai as genai
+from xtrace_memory import XTraceMemory, render_context
 
 # Read Gemini API key
 GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -91,9 +92,10 @@ def agent_timeliness(news_content: str, facts: dict, evidence: dict, current_tim
         return [], []
 
 # 7. Judgement Agent
-def agent_judgement(news_content: str, facts: dict, evidence: dict, analysis: dict, latest_updates: list, current_time: str) -> dict:
+def agent_judgement(news_content: str, facts: dict, evidence: dict, analysis: dict, latest_updates: list, current_time: str, memory_context: str = "") -> dict:
     prompt = PROMPT_JUDGEMENT.format(
-        news_content=news_content, facts=facts, evidence=evidence, analysis=analysis, latest_updates=latest_updates, current_time=current_time)
+        news_content=news_content, facts=facts, evidence=evidence, analysis=analysis, latest_updates=latest_updates, current_time=current_time,
+        memory_context=memory_context)
     response = model.generate_content(prompt)
     try:
         judge_json = eval(response.text)
@@ -121,16 +123,38 @@ def agent_report_expert(news_content: str, facts: dict, evidence: dict, analysis
 # Main process
 def verynews_news_judge(news_content: str, config: dict = None) -> dict:
     current_time = datetime.utcnow().isoformat() + "Z"
+    memory = XTraceMemory()
+
+    # XTrace 1 & 2: recall before acting, and load learned guidance.
+    prior = memory.recall(news_content)
+    lessons = memory.lessons("verify a news claim against trusted sources")
+    memory_context = render_context(prior)
+    if lessons:
+        memory_context += "\n\n## Learned retrieval guidance\n\n" + "\n".join(
+            f"- {item}" for item in lessons
+        )
+
     news_en = news_translate_to_en(news_content)
     facts = agent_5w1h(news_en, current_time)
     search_results = asyncio.run(agent_fact_check(news_en, facts, current_time))
     evidence = agent_evidence_aggregation(search_results, current_time)
     expert = agent_expert_analysis(news_en, facts, evidence, current_time)
     timeline, latest_updates = agent_timeliness(news_en, facts, evidence, current_time)
-    judge = agent_judgement(news_en, facts, evidence, expert, latest_updates, current_time)
+    judge = agent_judgement(news_en, facts, evidence, expert, latest_updates, current_time, memory_context=memory_context)
     visualization = agent_visualization(news_en, facts, evidence, expert, timeline, current_time)
     markdown_report = agent_report_expert(news_en, facts, evidence, expert, judge, timeline, latest_updates, visualization, current_time)
+
+    # XTrace 3: save what changed, so the next run starts from here.
+    stored = memory.remember(
+        news_content, judge.get("result", "Unknown"), judge.get("reason", "")
+    )
+
     return {
         "judge_json": judge,
-        "markdown_report": markdown_report
-    } 
+        "markdown_report": markdown_report,
+        "memory": {
+            "recalled": len(prior),
+            "lessons": len(lessons),
+            "stored": stored,
+        },
+    }
